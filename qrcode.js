@@ -462,21 +462,36 @@ var qrcode = function() {
 		// qrcode.stringToBytes
 		//---------------------------------------------------------------------
 		qrcode.stringToBytes = function(s) {
-			var bytes = new Array(), st;
+			var bytes = new Array(),
+				byteArray;
 			for (var i = 0; i < s.length; i += 1) {
-				var c = s.charCodeAt(i);
-				// if (c > 255) {
-				// 	bytes.push((c >> 8) & 0xff);
-				// 	bytes.push(c & 0xff);
-				// } else {
-				// 	bytes.push(c & 0xff);
-				// }
-				st = [];
-				do {
-					st.push(c & 0xFF);
-					c = c >> 8;
-				} while (c);
-				bytes = bytes.concat(st.reverse());
+				// Added to support UTF-8 Characters
+				var code = s.charCodeAt(i);
+
+				byteArray = [];
+				if (code > 0x10000) {
+					byteArray[0] = 0xF0 | ((code & 0x1C0000) >>> 18);
+					byteArray[1] = 0x80 | ((code & 0x3F000) >>> 12);
+					byteArray[2] = 0x80 | ((code & 0xFC0) >>> 6);
+					byteArray[3] = 0x80 | (code & 0x3F);
+				} else if (code > 0x800) {
+					byteArray[0] = 0xE0 | ((code & 0xF000) >>> 12);
+					byteArray[1] = 0x80 | ((code & 0xFC0) >>> 6);
+					byteArray[2] = 0x80 | (code & 0x3F);
+				} else if (code > 0x80) {
+					byteArray[0] = 0xC0 | ((code & 0x7C0) >>> 6);
+					byteArray[1] = 0x80 | (code & 0x3F);
+				} else {
+					byteArray[0] = code;
+				}
+
+				bytes = bytes.concat(byteArray);
+			}
+
+			if (bytes.length != s.length) {
+				bytes.unshift(191);
+				bytes.unshift(187);
+				bytes.unshift(239);
 			}
 			return bytes;
 		};
